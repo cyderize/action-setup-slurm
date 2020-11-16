@@ -1,0 +1,29 @@
+name: "Setup SLURM"
+description: "Setup SLURM for testing"
+runs:
+  using: "composite"
+  steps:
+    - name: Installing SLURM
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y slurm-wlm
+      shell: bash
+    - name: Creating slurm.conf
+      run: |
+        VERSION=$(slurmd -V | cut -d' ' -f2 | cut -d'.' -f1)
+        if [ "$VERSION" -gt 17 ]; then
+          CONFIG_TEMPLATE=$GITHUB_ACTION_PATH/slurm.conf
+        else
+          CONFIG_TEMPLATE=$GITHUB_ACTION_PATH/slurm.old.conf
+        fi
+        HOST=$(hostname -s) \
+        NODE=$(slurmd -C | head -n 1) \
+          envsubst < $CONFIG_TEMPLATE | \
+          sudo tee /etc/slurm-llnl/slurm.conf
+      shell: bash
+    - name: Starting services
+      run: |
+        sudo systemctl start munge
+        sudo systemctl start slurmctld
+        sudo systemctl start slurmd
+      shell: bash
